@@ -13,7 +13,7 @@ Follow the WeChat Official Account **【曹工不加班】** by scanning the QR 
 
 ---
 
-# @ronglecat/n8n-nodes-nano-banana
+# n8n-nodes-nano-banana
 
 This is an n8n community node that allows you to generate images using Google's Gemini models (Nano Banana).
 

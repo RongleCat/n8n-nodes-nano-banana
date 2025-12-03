@@ -7,7 +7,7 @@ class NanoBanana {
         this.description = {
             displayName: 'Nano Banana',
             name: 'nanoBanana',
-            icon: 'file:../../icons/github.svg',
+            icon: { light: 'file:../../icons/banana.svg', dark: 'file:../../icons/banana.dark.svg' },
             group: ['transform'],
             version: 1,
             description: 'Generate images using Nano Banana (Gemini)',

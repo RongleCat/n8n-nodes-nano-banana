@@ -11,6 +11,9 @@ export declare class NanoBananaApi implements ICredentialType {
             qs: {
                 key: string;
             };
+            headers: {
+                Authorization: string;
+            };
         };
     };
     properties: INodeProperties[];

@@ -5,13 +5,14 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 	JsonObject,
+	Icon
 } from 'n8n-workflow';
 
 export class NanoBanana implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Nano Banana',
 		name: 'nanoBanana',
-		icon: 'file:../../icons/github.svg',
+		icon: { light: 'file:../../icons/banana.svg', dark: 'file:../../icons/banana.dark.svg' } as Icon,
 		group: ['transform'],
 		version: 1,
 		description: 'Generate images using Nano Banana (Gemini)',

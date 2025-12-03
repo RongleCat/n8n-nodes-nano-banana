@@ -5,14 +5,17 @@ class NanoBananaApi {
     constructor() {
         this.name = 'nanoBananaApi';
         this.displayName = 'Nano Banana API';
-        this.icon = { light: 'file:../icons/github.svg', dark: 'file:../icons/github.dark.svg' };
+        this.icon = { light: 'file:../icons/banana.svg', dark: 'file:../icons/banana.dark.svg' };
         this.documentationUrl = 'https://ai.google.dev/gemini-api/docs/image-generation';
         this.test = {
             request: {
-                baseURL: 'https://generativelanguage.googleapis.com',
-                url: '/v1beta/models',
+                baseURL: '={{$credentials?.connectionType === "openai" ? $credentials?.baseUrl?.replace(new RegExp("/$"), "") : "https://generativelanguage.googleapis.com"}}',
+                url: '={{$credentials?.connectionType === "openai" ? "/models" : "/v1beta/models"}}',
                 qs: {
-                    key: '={{$credentials?.apiKey}}',
+                    key: '={{$credentials?.connectionType === "official" ? $credentials?.apiKey : undefined}}',
+                },
+                headers: {
+                    Authorization: '={{$credentials?.connectionType === "openai" ? "Bearer " + $credentials?.apiKey : undefined}}',
                 },
             },
         };

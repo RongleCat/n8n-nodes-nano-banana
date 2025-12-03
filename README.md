@@ -11,7 +11,7 @@
 
 ---
 
-# @ronglecat/n8n-nodes-nano-banana
+# n8n-nodes-nano-banana
 
 这是一个 n8n 社区节点，允许你使用 Google 的 Gemini 模型 (Nano Banana) 生成图像。
 
