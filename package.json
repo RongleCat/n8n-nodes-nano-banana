@@ -5,7 +5,11 @@
     "license": "MIT",
     "homepage": "",
     "keywords": [
-        "n8n-community-node-package"
+        "n8n-community-node-package",
+        "n8n-node",
+        "nano-banana",
+        "aigc",
+        "image-generation"
     ],
     "author": {
         "name": "曹工不加班",

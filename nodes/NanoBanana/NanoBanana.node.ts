@@ -69,6 +69,9 @@ export class NanoBanana implements INodeType {
 				name: 'prompt',
 				type: 'string',
 				default: '',
+				typeOptions: {
+					rows: 4,
+				},
 				required: true,
 				displayOptions: {
 					show: {
@@ -83,7 +86,7 @@ export class NanoBanana implements INodeType {
 				type: 'string',
 				default: '',
 				typeOptions: {
-					rows: 2,
+					rows: 4,
 				},
 				displayOptions: {
 					show: {
@@ -185,12 +188,8 @@ export class NanoBanana implements INodeType {
 						refImages = refImagesInput as string[];
 					} else if (typeof refImagesInput === 'string') {
 						const trimmedInput = refImagesInput.trim();
-						// heuristic: if it starts with data:, assume it's a single Data URI and don't split by comma
-						if (trimmedInput.startsWith('data:')) {
-							refImages = [trimmedInput];
-						} else {
-							refImages = trimmedInput.split(',').map(s => s.trim()).filter(s => s);
-						}
+						// Split by | or ; (ignoring ; inside data: URI)
+						refImages = trimmedInput.split(/\||;(?!base64,)/).map(s => s.trim()).filter(s => s);
 					}
 
 					const maxImages = model === 'gemini-2.5-flash-image' ? 3 : 14;
