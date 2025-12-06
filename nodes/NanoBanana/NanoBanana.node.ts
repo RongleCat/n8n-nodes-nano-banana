@@ -93,7 +93,7 @@ export class NanoBanana implements INodeType {
 						operation: ['imageToImage'],
 					},
 				},
-				description: '参考图片,支持URL或Base64字符串数组。Flash最多支持3张,Pro最多支持14张 / Reference images as an array of strings (URLs or Base64). Flash supports max 3, Pro supports max 14.',
+				description: '参考图片,支持URL或Base64字符串。多个图片可用换行、分号(;)或竖线(|)分隔,一行一个。输入"data"时自动从前置节点的binary.data字段读取。Flash最多支持3张,Pro最多支持14张 / Reference images as URLs or Base64 strings. Multiple images can be separated by newlines, semicolons (;), or pipes (|), one per line. Input "data" to auto-read from previous node\'s binary.data field. Flash supports max 3, Pro supports max 14.',
 			},
 			{
 				displayName: '宽高比(Aspect Ratio)',
@@ -183,8 +183,23 @@ export class NanoBanana implements INodeType {
 						refImages = refImagesInput as string[];
 					} else if (typeof refImagesInput === 'string') {
 						const trimmedInput = refImagesInput.trim();
-						// Split by | or ; (ignoring ; inside data: URI)
-						refImages = trimmedInput.split(/\||;(?!base64,)/).map(s => s.trim()).filter(s => s);
+
+						// Special case: if input is exactly "data", get from previous node's binary data field
+						if (trimmedInput === 'data') {
+							const binaryData = items[i].binary?.data;
+							if (binaryData) {
+								// Convert binary data to base64 string
+								const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');
+								const base64 = buffer.toString('base64');
+								const mimeType = binaryData.mimeType || 'image/png';
+								refImages = [`data:${mimeType};base64,${base64}`];
+							} else {
+								throw new NodeOperationError(this.getNode(), 'Input is "data" but no binary data field named "data" found in previous node output.', { itemIndex: i });
+							}
+						} else {
+							// Split by newline, | or ; (ignoring ; inside data: URI)
+							refImages = trimmedInput.split(/\n|\||;(?!base64,)/).map(s => s.trim()).filter(s => s);
+						}
 					}
 
 					const maxImages = model === 'gemini-2.5-flash-image' ? 3 : 14;
