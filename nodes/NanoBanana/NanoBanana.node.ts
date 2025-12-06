@@ -15,7 +15,7 @@ export class NanoBanana implements INodeType {
 		icon: { light: 'file:../../icons/banana.svg', dark: 'file:../../icons/banana.dark.svg' } as Icon,
 		group: ['transform'],
 		version: 1,
-		description: 'Generate images using Nano Banana (Gemini)',
+		description: '使用 Nano Banana (Gemini) 生成图片。💡 想获取更多教程?关注公众号【曹工不加班】/ Generate images using Nano Banana (Gemini). 💡 Want more tutorials? Follow【曹工不加班】',
 		defaults: {
 			name: 'Nano Banana',
 		},
@@ -29,26 +29,26 @@ export class NanoBanana implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Operation',
+				displayName: '操作(Operation)',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Text to Image',
+						name: '文本生成图片(Text to Image)',
 						value: 'textToImage',
-						action: 'Generate image from text',
+						action: '从文本生成图片 / Generate image from text',
 					},
 					{
-						name: 'Image to Image',
+						name: '图片生成图片(Image to Image)',
 						value: 'imageToImage',
-						action: 'Generate image from image and text',
+						action: '从图片和文本生成图片 / Generate image from image and text',
 					},
 				],
 				default: 'textToImage',
 			},
 			{
-				displayName: 'Model',
+				displayName: '模型(Model)',
 				name: 'model',
 				type: 'options',
 				options: [
@@ -62,10 +62,10 @@ export class NanoBanana implements INodeType {
 					},
 				],
 				default: 'gemini-2.5-flash-image',
-				description: 'The model to use for generation',
+				description: '用于生成的模型 / The model to use for generation',
 			},
 			{
-				displayName: 'Prompt',
+				displayName: '提示词(Prompt)',
 				name: 'prompt',
 				type: 'string',
 				default: '',
@@ -78,10 +78,10 @@ export class NanoBanana implements INodeType {
 						operation: ['textToImage', 'imageToImage'],
 					},
 				},
-				description: 'The text prompt for the image generation',
+				description: '用于图片生成的文本提示词 / The text prompt for the image generation',
 			},
 			{
-				displayName: 'Reference Images',
+				displayName: '参考图片(Reference Images)',
 				name: 'referenceImages',
 				type: 'string',
 				default: '',
@@ -93,10 +93,10 @@ export class NanoBanana implements INodeType {
 						operation: ['imageToImage'],
 					},
 				},
-				description: 'Reference images as an array of strings (URLs or Base64). Flash supports max 3, Pro supports max 14.',
+				description: '参考图片,支持URL或Base64字符串数组。Flash最多支持3张,Pro最多支持14张 / Reference images as an array of strings (URLs or Base64). Flash supports max 3, Pro supports max 14.',
 			},
 			{
-				displayName: 'Aspect Ratio',
+				displayName: '宽高比(Aspect Ratio)',
 				name: 'aspectRatio',
 				type: 'options',
 				options: [
@@ -114,7 +114,7 @@ export class NanoBanana implements INodeType {
 				default: '1:1',
 			},
 			{
-				displayName: 'Resolution',
+				displayName: '分辨率(Resolution)',
 				name: 'resolution',
 				type: 'options',
 				options: [
@@ -130,25 +130,25 @@ export class NanoBanana implements INodeType {
 				},
 			},
 			{
-				displayName: 'Output Format',
+				displayName: '输出格式(Output Format)',
 				name: 'outputFormat',
 				type: 'options',
 				options: [
-					{ name: 'Base64 Data URL', value: 'dataUrl' },
-					{ name: 'Base64 String', value: 'base64' },
-					{ name: 'Binary File', value: 'binary' },
-					{ name: 'Image URL', value: 'url' },
-					{ name: 'Raw Response', value: 'raw' },
+					{ name: '二进制文件(Binary File)', value: 'binary' },
+					{ name: '图片URL(Image URL)', value: 'url' },
+					{ name: '原始响应(Raw Response)', value: 'raw' },
+					{ name: 'Base64数据URL(Base64 Data URL)', value: 'dataUrl' },
+					{ name: 'Base64字符串(Base64 String)', value: 'base64' },
 				],
 				default: 'binary',
-				description: 'Format of the output data',
+				description: '输出数据的格式 / Format of the output data',
 			},
 			{
-				displayName: 'Output Property Name',
+				displayName: '输出属性名称(Output Property Name)',
 				name: 'outputPropertyName',
 				type: 'string',
 				default: 'data',
-				description: 'Name of the property to store the output data (binary file or text string). For multiple images, indices will be appended.',
+				description: '存储输出数据的属性名称(二进制文件或文本字符串)。对于多张图片,会添加索引后缀 / Name of the property to store the output data (binary file or text string). For multiple images, indices will be appended.',
 				displayOptions: {
 					show: {
 						outputFormat: ['binary'],
@@ -166,11 +166,6 @@ export class NanoBanana implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				const credentials = await this.getCredentials('nanoBananaApi');
-				
-				// 1. Auth Code Validation
-				if (credentials.authCode !== 'cgnot996') {
-					throw new NodeOperationError(this.getNode(), 'Invalid Auth Code. Please visit our Official Account to get a valid code.', { itemIndex: i });
-				}
 
 				const operation = this.getNodeParameter('operation', i) as string;
 				const model = this.getNodeParameter('model', i) as string;
@@ -180,7 +175,7 @@ export class NanoBanana implements INodeType {
 				const outputFormat = this.getNodeParameter('outputFormat', i, 'binary') as string;
 				const outputPropertyName = this.getNodeParameter('outputPropertyName', i, 'data') as string;
 
-				// 2. Image Validation & Preparation
+				// 1. Image Validation & Preparation
 				let refImages: string[] = [];
 				if (operation === 'imageToImage') {
 					const refImagesInput = this.getNodeParameter('referenceImages', i);
@@ -220,7 +215,7 @@ export class NanoBanana implements INodeType {
 								const arrayBuffer = await response.arrayBuffer();
 								mimeType = response.headers.get('content-type') || 'image/png';
 								base64Data = Buffer.from(arrayBuffer).toString('base64');
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							} catch (error: any) {
 								throw new NodeOperationError(this.getNode(), `Failed to process reference image URL: ${img}. Reason: ${error.message}`, { itemIndex: i });
 							}
@@ -295,7 +290,7 @@ export class NanoBanana implements INodeType {
 						body,
 						json: true,
 					}) as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { data: string; mimeType: string }; text?: string }> } }> };
-					
+
 					rawResponse = responseData as JsonObject;
 
 					// Extract images
@@ -320,7 +315,7 @@ export class NanoBanana implements INodeType {
 
 					let baseUrl = credentials.baseUrl as string;
 					if (!baseUrl.endsWith('/')) baseUrl += '/';
-					
+
 					const url = `${baseUrl}chat/completions`;
 
 					// Prepare Messages
@@ -358,12 +353,12 @@ export class NanoBanana implements INodeType {
 					const imageConfig: JsonObject = {
 						aspectRatio: aspectRatio,
 					};
-					
+
 					// Only add resolution for Pro model
 					if (model === 'gemini-3-pro-image-preview') {
 						imageConfig.imageSize = resolution;
 					}
-					
+
 					const body: JsonObject = {
 						model: model,
 						messages: messages,
@@ -389,7 +384,7 @@ export class NanoBanana implements INodeType {
 						const errorMsg = (response.body?.error as JsonObject)?.message || JSON.stringify(response.body);
 						throw new NodeOperationError(this.getNode(), `API Error ${response.statusCode}: ${errorMsg}`, { itemIndex: i });
 					}
-					
+
 					rawResponse = response.body as JsonObject;
 					const responseData = response.body as { choices?: Array<{ message?: { content?: string } }> };
 
@@ -427,7 +422,7 @@ export class NanoBanana implements INodeType {
 										foundData = true;
 									}
 								}
-								
+
 								if (!foundData) {
 									// 3. Check if it looks like raw base64
 									const cleanContent = content.replace(/\s/g, '');
@@ -443,9 +438,9 @@ export class NanoBanana implements INodeType {
 						}
 					}
 				}
-				
+
 				// --- PROCESS OUTPUT ---
-				
+
 				if (outputFormat === 'raw') {
 					returnData.push({
 						json: rawResponse
@@ -456,7 +451,7 @@ export class NanoBanana implements INodeType {
 					for (let j = 0; j < extractedImages.length; j++) {
 						const img = extractedImages[j];
 						const keyName = j === 0 ? outputPropertyName : `${outputPropertyName}_${j}`;
-						
+
 						if (img.type === 'base64') {
 							binaries[keyName] = await this.helpers.prepareBinaryData(
 								Buffer.from(img.data, 'base64'),
@@ -468,21 +463,21 @@ export class NanoBanana implements INodeType {
 							// Throw error or skip? User asked for conversion but downloading adds network overhead/failure points.
 							// Let's try to download if it's a URL.
 							try {
-								 
-									// Use native fetch for better binary support
-									const response = await fetch(img.data);
-									if (!response.ok) {
-										throw new NodeOperationError(this.getNode(), `HTTP ${response.status} ${response.statusText}`, { itemIndex: i });
-									}
-									const arrayBuffer = await response.arrayBuffer();
-									const imageBuffer = Buffer.from(arrayBuffer);
-									
-									binaries[keyName] = await this.helpers.prepareBinaryData(
-										imageBuffer,
-										`image_${j}.png`,
-										img.mimeType
-									);
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+								// Use native fetch for better binary support
+								const response = await fetch(img.data);
+								if (!response.ok) {
+									throw new NodeOperationError(this.getNode(), `HTTP ${response.status} ${response.statusText}`, { itemIndex: i });
+								}
+								const arrayBuffer = await response.arrayBuffer();
+								const imageBuffer = Buffer.from(arrayBuffer);
+
+								binaries[keyName] = await this.helpers.prepareBinaryData(
+									imageBuffer,
+									`image_${j}.png`,
+									img.mimeType
+								);
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							} catch (error: any) {
 								throw new NodeOperationError(this.getNode(), `Failed to download image from URL: ${img.data}. Reason: ${error.message}`, { itemIndex: i });
 							}
@@ -498,7 +493,7 @@ export class NanoBanana implements INodeType {
 				} else {
 					// Base64, DataURL, URL
 					const outputData: string[] = [];
-					
+
 					for (const img of extractedImages) {
 						if (outputFormat === 'url') {
 							if (img.type === 'url') {
@@ -530,7 +525,7 @@ export class NanoBanana implements INodeType {
 						} else if (outputFormat === 'dataUrl') {
 							let b64 = '';
 							const mime = img.mimeType;
-							
+
 							if (img.type === 'base64') {
 								b64 = img.data;
 							} else {
@@ -549,13 +544,13 @@ export class NanoBanana implements INodeType {
 									// Ignore
 								}
 							}
-							
+
 							if (b64) {
 								outputData.push(`data:${mime};base64,${b64}`);
 							}
 						}
 					}
-					
+
 					if (outputFormat === 'url' && outputData.length === 0 && responseText) {
 						outputData.push(responseText);
 					}
@@ -564,7 +559,7 @@ export class NanoBanana implements INodeType {
 						success: true,
 						count: extractedImages.length
 					};
-					
+
 					// Assign to output property
 					// If multiple images, use array. If single, use string (or array based on consistency preference).
 					// To be safe and consistent with other nodes, if count > 1, use array. If count == 1, use value?
@@ -574,7 +569,7 @@ export class NanoBanana implements INodeType {
 					} else if (outputData.length > 1) {
 						responseJson[outputPropertyName] = outputData;
 					}
-					
+
 					returnData.push({
 						json: responseJson
 					});

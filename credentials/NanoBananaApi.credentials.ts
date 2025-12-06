@@ -21,32 +21,24 @@ export class NanoBananaApi implements ICredentialType {
 
 	properties: INodeProperties[] = [
 		{
-			displayName: 'Auth Code',
-			name: 'authCode',
-			type: 'string',
-			default: '',
-			description: 'Get it from the WeChat Official Account. Required for usage.',
-			placeholder: 'cgnot...',
-			required: true,
-		},
-		{
-			displayName: 'Connection Type',
+			displayName: '连接类型(Connection Type)',
 			name: 'connectionType',
 			type: 'options',
 			options: [
 				{
-					name: 'Official',
+					name: '官方(Official)',
 					value: 'official',
 				},
 				{
-					name: 'OpenAI Compatible',
+					name: 'OpenAI兼容(OpenAI Compatible)',
 					value: 'openai',
 				},
 			],
 			default: 'official',
+			description: '💡 想获取更多 n8n 自动化教程和 VIP 节点?请关注微信公众号【曹工不加班】! / 💡 Want more n8n tutorials and VIP nodes? Follow WeChat Official Account【曹工不加班】!',
 		},
 		{
-			displayName: 'API Key',
+			displayName: 'API密钥(API Key)',
 			name: 'apiKey',
 			type: 'string',
 			typeOptions: { password: true },
@@ -54,7 +46,7 @@ export class NanoBananaApi implements ICredentialType {
 			required: true,
 		},
 		{
-			displayName: 'Base URL',
+			displayName: '基础URL(Base URL)',
 			name: 'baseUrl',
 			type: 'string',
 			default: 'https://generativelanguage.googleapis.com/v1beta/openai/',
@@ -63,7 +55,7 @@ export class NanoBananaApi implements ICredentialType {
 					connectionType: ['openai'],
 				},
 			},
-			description: 'The base URL for the OpenAI compatible API. Should typically end with /',
+			description: 'OpenAI兼容API的基础URL,通常应以 / 结尾 / The base URL for the OpenAI compatible API. Should typically end with /',
 		},
 	];
 }
