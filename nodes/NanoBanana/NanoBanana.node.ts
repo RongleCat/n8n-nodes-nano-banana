@@ -93,7 +93,7 @@ export class NanoBanana implements INodeType {
 						operation: ['imageToImage'],
 					},
 				},
-				description: '参考图片,支持URL或Base64字符串。多个图片可用换行、分号(;)或竖线(|)分隔,一行一个。输入"data"时自动从前置节点的binary.data字段读取。Flash最多支持3张,Pro最多支持14张 / Reference images as URLs or Base64 strings. Multiple images can be separated by newlines, semicolons (;), or pipes (|), one per line. Input "data" to auto-read from previous node\'s binary.data field. Flash supports max 3, Pro supports max 14.',
+				description: '参考图片,支持URL、Base64字符串或二进制字段名。多个图片可用竖线(|)或换行分隔。支持混合使用不同格式。Flash最多支持3张,Pro最多支持14张 / Reference images as URLs, Base64 strings, or binary field names. Multiple images can be separated by pipes (|) or newlines. Supports mixing different formats. Flash supports max 3, Pro supports max 14.',
 			},
 			{
 				displayName: '宽高比(Aspect Ratio)',
@@ -155,6 +155,28 @@ export class NanoBanana implements INodeType {
 					},
 				},
 			},
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: {
+					show: {
+						outputFormat: ['binary'],
+					},
+				},
+				options: [
+					{
+						displayName: '输出文件名(Output File Name)',
+						name: 'outputFileName',
+						type: 'string',
+						default: '',
+						placeholder: 'generated_image.png',
+						description: '二进制文件的文件名。留空则使用默认命名(image_0.png, image_1.png等)。对于多张图片,会自动添加索引后缀 / File name for the binary data. Leave empty for default naming (image_0.png, image_1.png, etc). For multiple images, indices will be appended automatically.',
+					},
+				],
+			},
 		],
 		usableAsTool: true,
 	};
@@ -174,39 +196,91 @@ export class NanoBanana implements INodeType {
 				const resolution = this.getNodeParameter('resolution', i, '1K') as string;
 				const outputFormat = this.getNodeParameter('outputFormat', i, 'binary') as string;
 				const outputPropertyName = this.getNodeParameter('outputPropertyName', i, 'data') as string;
+				const options = this.getNodeParameter('options', i, {}) as { outputFileName?: string };
+				const outputFileName = options.outputFileName || '';
 
 				// 1. Image Validation & Preparation
-				let refImages: string[] = [];
-				if (operation === 'imageToImage') {
-					const refImagesInput = this.getNodeParameter('referenceImages', i);
-					if (Array.isArray(refImagesInput)) {
-						refImages = refImagesInput as string[];
-					} else if (typeof refImagesInput === 'string') {
-						const trimmedInput = refImagesInput.trim();
-
-						// Special case: if input is exactly "data", get from previous node's binary data field
-						if (trimmedInput === 'data') {
-							const binaryData = items[i].binary?.data;
-							if (binaryData) {
-								// Convert binary data to base64 string
-								const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');
-								const base64 = buffer.toString('base64');
-								const mimeType = binaryData.mimeType || 'image/png';
-								refImages = [`data:${mimeType};base64,${base64}`];
+			let refImages: string[] = [];
+			if (operation === 'imageToImage') {
+				const refImagesInput = this.getNodeParameter('referenceImages', i);
+				
+				// Phase 1: Split input into array of items to process
+				let itemsToProcess: string[] = [];
+				if (Array.isArray(refImagesInput)) {
+					itemsToProcess = refImagesInput as string[];
+				} else if (typeof refImagesInput === 'string' && refImagesInput.trim()) {
+					// Split by pipe or newline, filter empty values
+				itemsToProcess = refImagesInput.split(/[\n|]/).map(s => s.trim()).filter(s => s);
+				}
+				
+				// Phase 2: Process each item to convert to base64 data URI
+				for (let idx = 0; idx < itemsToProcess.length; idx++) {
+					const item = itemsToProcess[idx];
+					
+					try {
+						// Check if it's already a data URI (starts with "data:")
+						if (item.startsWith('data:')) {
+							const matches = item.match(/^data:(.+);base64,(.+)$/);
+							if (matches && matches[1].startsWith('image/')) {
+								// Valid image data URI
+								refImages.push(item);
 							} else {
-								throw new NodeOperationError(this.getNode(), 'Input is "data" but no binary data field named "data" found in previous node output.', { itemIndex: i });
+								throw new Error('Data URI is not a valid image format or missing base64 encoding');
 							}
-						} else {
-							// Split by newline, | or ; (ignoring ; inside data: URI)
-							refImages = trimmedInput.split(/\n|\||;(?!base64,)/).map(s => s.trim()).filter(s => s);
 						}
-					}
-
-					const maxImages = model === 'gemini-2.5-flash-image' ? 3 : 14;
-					if (refImages.length > maxImages) {
-						throw new NodeOperationError(this.getNode(), `Model ${model} supports maximum ${maxImages} reference images, but ${refImages.length} were provided.`, { itemIndex: i });
+						// Check if it's a URL (starts with http:// or https://)
+						else if (item.startsWith('http://') || item.startsWith('https://')) {
+							// Download and convert to base64
+							const response = await fetch(item);
+							if (!response.ok) {
+								throw new Error(`HTTP ${response.status} ${response.statusText}`);
+							}
+							const arrayBuffer = await response.arrayBuffer();
+							const base64 = Buffer.from(arrayBuffer).toString('base64');
+							const mimeType = response.headers.get('content-type') || 'image/png';
+							
+							if (!mimeType.startsWith('image/')) {
+								throw new Error(`URL returned MIME type "${mimeType}" which is not an image`);
+							}
+							
+							refImages.push(`data:${mimeType};base64,${base64}`);
+						}
+						// Check if it's pure base64 (very long alphanumeric string)
+						else if (/^[a-zA-Z0-9+/=\s]+$/.test(item) && item.replace(/\s/g, '').length > 100) {
+							// Treat as raw base64, assume PNG
+							const cleanBase64 = item.replace(/\s/g, '');
+							refImages.push(`data:image/png;base64,${cleanBase64}`);
+						}
+						// Otherwise, treat as binary field name
+						else {
+							const binaryData = items[i].binary?.[item];
+							if (!binaryData) {
+								throw new Error(`Binary field "${item}" not found. Available fields: ${Object.keys(items[i].binary || {}).join(', ') || 'none'}`);
+							}
+							
+							const mimeType = binaryData.mimeType || 'image/png';
+							if (!mimeType.startsWith('image/')) {
+								throw new Error(`Binary field "${item}" has MIME type "${mimeType}" which is not an image`);
+							}
+							
+							const buffer = await this.helpers.getBinaryDataBuffer(i, item);
+							const base64 = buffer.toString('base64');
+							refImages.push(`data:${mimeType};base64,${base64}`);
+						}
+					} catch (error: any) {
+						throw new NodeOperationError(
+							this.getNode(), 
+							`Failed to process reference image #${idx + 1} ("${item.length > 50 ? item.substring(0, 50) + '...' : item}"): ${error.message}`, 
+							{ itemIndex: i }
+						);
 					}
 				}
+
+				const maxImages = model === 'gemini-2.5-flash-image' ? 3 : 14;
+				if (refImages.length > maxImages) {
+					throw new NodeOperationError(this.getNode(), `Model ${model} supports maximum ${maxImages} reference images, but ${refImages.length} were provided.`, { itemIndex: i });
+				}
+			}	
 
 				// Pre-process reference images (download URLs, extract Base64)
 				const processedRefImages: Array<{ mimeType: string; data: string }> = [];
@@ -467,10 +541,22 @@ export class NanoBanana implements INodeType {
 						const img = extractedImages[j];
 						const keyName = j === 0 ? outputPropertyName : `${outputPropertyName}_${j}`;
 
+						// Determine file name
+						let fileName = outputFileName || `image_${j}.png`;
+						if (extractedImages.length > 1 && outputFileName) {
+							// Add index to custom file name for multiple images
+							const dotIndex = outputFileName.lastIndexOf('.');
+							if (dotIndex > 0) {
+								fileName = `${outputFileName.substring(0, dotIndex)}_${j}${outputFileName.substring(dotIndex)}`;
+							} else {
+								fileName = `${outputFileName}_${j}`;
+							}
+						}
+
 						if (img.type === 'base64') {
 							binaries[keyName] = await this.helpers.prepareBinaryData(
 								Buffer.from(img.data, 'base64'),
-								`image_${j}.png`,
+								fileName,
 								img.mimeType
 							);
 						} else {
@@ -489,7 +575,7 @@ export class NanoBanana implements INodeType {
 
 								binaries[keyName] = await this.helpers.prepareBinaryData(
 									imageBuffer,
-									`image_${j}.png`,
+									fileName,
 									img.mimeType
 								);
 								// eslint-disable-next-line @typescript-eslint/no-explicit-any
