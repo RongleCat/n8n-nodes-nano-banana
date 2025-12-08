@@ -200,7 +200,7 @@ export class NanoBanana implements INodeType {
 				const outputFileName = options.outputFileName || '';
 
 				// 1. Image Validation & Preparation
-			let refImages: string[] = [];
+				const refImages: string[] = [];
 			if (operation === 'imageToImage') {
 				const refImagesInput = this.getNodeParameter('referenceImages', i);
 				
@@ -225,7 +225,7 @@ export class NanoBanana implements INodeType {
 								// Valid image data URI
 								refImages.push(item);
 							} else {
-								throw new Error('Data URI is not a valid image format or missing base64 encoding');
+								throw new NodeOperationError(this.getNode(), 'Data URI is not a valid image format or missing base64 encoding', { itemIndex: i });
 							}
 						}
 						// Check if it's a URL (starts with http:// or https://)
@@ -233,14 +233,14 @@ export class NanoBanana implements INodeType {
 							// Download and convert to base64
 							const response = await fetch(item);
 							if (!response.ok) {
-								throw new Error(`HTTP ${response.status} ${response.statusText}`);
+								throw new NodeOperationError(this.getNode(), `HTTP ${response.status} ${response.statusText}`, { itemIndex: i });
 							}
 							const arrayBuffer = await response.arrayBuffer();
 							const base64 = Buffer.from(arrayBuffer).toString('base64');
 							const mimeType = response.headers.get('content-type') || 'image/png';
 							
 							if (!mimeType.startsWith('image/')) {
-								throw new Error(`URL returned MIME type "${mimeType}" which is not an image`);
+								throw new NodeOperationError(this.getNode(), `URL returned MIME type "${mimeType}" which is not an image`, { itemIndex: i });
 							}
 							
 							refImages.push(`data:${mimeType};base64,${base64}`);
@@ -255,22 +255,23 @@ export class NanoBanana implements INodeType {
 						else {
 							const binaryData = items[i].binary?.[item];
 							if (!binaryData) {
-								throw new Error(`Binary field "${item}" not found. Available fields: ${Object.keys(items[i].binary || {}).join(', ') || 'none'}`);
+								throw new NodeOperationError(this.getNode(), `Binary field "${item}" not found. Available fields: ${Object.keys(items[i].binary || {}).join(', ') || 'none'}`, { itemIndex: i });
 							}
 							
 							const mimeType = binaryData.mimeType || 'image/png';
 							if (!mimeType.startsWith('image/')) {
-								throw new Error(`Binary field "${item}" has MIME type "${mimeType}" which is not an image`);
+								throw new NodeOperationError(this.getNode(), `Binary field "${item}" has MIME type "${mimeType}" which is not an image`, { itemIndex: i });
 							}
 							
 							const buffer = await this.helpers.getBinaryDataBuffer(i, item);
 							const base64 = buffer.toString('base64');
 							refImages.push(`data:${mimeType};base64,${base64}`);
 						}
-					} catch (error: any) {
+					} catch (error) {
+						const errorMessage = error instanceof Error ? error.message : String(error);
 						throw new NodeOperationError(
 							this.getNode(), 
-							`Failed to process reference image #${idx + 1} ("${item.length > 50 ? item.substring(0, 50) + '...' : item}"): ${error.message}`, 
+							`Failed to process reference image #${idx + 1} ("${item.length > 50 ? item.substring(0, 50) + '...' : item}"): ${errorMessage}`, 
 							{ itemIndex: i }
 						);
 					}
