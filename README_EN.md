@@ -69,11 +69,71 @@ You need to set up **Nano Banana API** credentials to use this node.
 ### Image to Image
 
 1.  Select **Image to Image** operation.
-2.  Provide **Reference Images** (URLs or Base64 strings).
-    - Flash model supports up to 3 reference images.
-    - Pro model supports up to 14 reference images.
+2.  Provide **Reference Images**.
 3.  Enter a **Prompt** to guide the generation.
 4.  Execute the node.
+
+#### Reference Images Field Guide
+
+**Supported Formats:**
+
+- **URL**: HTTP/HTTPS image links
+
+  ```
+  https://example.com/image.jpg
+  ```
+
+- **Data URI**: Base64-encoded image data
+
+  ```
+  data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+  ```
+
+- **Raw Base64**: Direct Base64 string (auto-detected as PNG)
+
+  ```
+  iVBORw0KGgoAAAANSUhEUgAA...
+  ```
+
+- **Binary Field Name**: Read from previous node's binary data
+  ```
+  data
+  image1
+  ```
+
+**Multiple Images Separator:**
+
+Use **pipe `|`** or **newline** to separate multiple images:
+
+```
+data|image1
+```
+
+or
+
+```
+data
+image1
+```
+
+**Mix Different Formats:**
+
+```
+data|https://example.com/image.jpg
+```
+
+or
+
+```
+data
+https://example.com/image.jpg
+data:image/png;base64,iVBORw0KGgo...
+```
+
+**Quantity Limits:**
+
+- Flash model supports up to **3** reference images
+- Pro model supports up to **14** reference images
 
 ## Compatibility
 

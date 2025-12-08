@@ -69,11 +69,71 @@
 ### 图生图 (Image to Image)
 
 1.  选择 **Image to Image** 操作。
-2.  提供 **参考图像 (Reference Images)**（URL 或 Base64 字符串）。
-    - Flash 模型最多支持 3 张参考图。
-    - Pro 模型最多支持 14 张参考图。
+2.  提供 **参考图像 (Reference Images)**。
 3.  输入 **提示词 (Prompt)** 来引导生成。
 4.  执行节点。
+
+#### 参考图像字段使用指南
+
+**支持的格式:**
+
+- **URL**: 图片的 HTTP/HTTPS 链接
+
+  ```
+  https://example.com/image.jpg
+  ```
+
+- **Data URI**: Base64 编码的图片数据
+
+  ```
+  data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+  ```
+
+- **纯 Base64**: 直接粘贴 Base64 字符串(自动识别为 PNG)
+
+  ```
+  iVBORw0KGgoAAAANSUhEUgAA...
+  ```
+
+- **Binary 字段名**: 从前一节点的二进制数据读取
+  ```
+  data
+  image1
+  ```
+
+**多个图片分隔:**
+
+使用 **竖线 `|`** 或 **换行** 分隔多个图片:
+
+```
+data|image1
+```
+
+或
+
+```
+data
+image1
+```
+
+**混合使用不同格式:**
+
+```
+data|https://example.com/image.jpg
+```
+
+或
+
+```
+data
+https://example.com/image.jpg
+data:image/png;base64,iVBORw0KGgo...
+```
+
+**数量限制:**
+
+- Flash 模型最多支持 **3 张**参考图
+- Pro 模型最多支持 **14 张**参考图
 
 ## 兼容性
 
