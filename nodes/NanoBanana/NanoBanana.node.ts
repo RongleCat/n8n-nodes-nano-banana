@@ -162,6 +162,14 @@ export class NanoBanana implements INodeType {
 				},
 			},
 			{
+				displayName: '生成失败时报错(Throw On Failure)',
+				name: 'throwOnFailure',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether to throw an error when image generation fails (including API errors, parse failures, etc.). On: throws error with details; Off: returns success:false with error details. 当图片生成失败时(包括API错误、解析失败等)的处理方式。开启:抛出错误并显示详细信息;关闭:返回 success:false 和错误详情',
+			},
+			{
 				displayName: 'Options',
 				name: 'options',
 				type: 'collection',
@@ -207,6 +215,11 @@ export class NanoBanana implements INodeType {
 						i,
 						'data',
 					) as string;
+					const throwOnFailure = this.getNodeParameter(
+						'throwOnFailure',
+						i,
+						true,
+					) as boolean;
 					const options = this.getNodeParameter('options', i, {}) as { outputFileName?: string };
 					const outputFileName = options.outputFileName || '';
 
@@ -583,6 +596,29 @@ export class NanoBanana implements INodeType {
 									}
 								}
 							}
+						}
+					}
+
+					// --- PROCESS OUTPUT ---
+
+					// --- CHECK PARSE RESULT ---
+					if (extractedImages.length === 0 && outputFormat !== 'raw') {
+						if (throwOnFailure) {
+							// 报错模式:抛出异常并显示原始响应
+							throw new NodeOperationError(
+								this.getNode(),
+								`无法从API响应中解析出图片内容。原始响应: ${JSON.stringify(rawResponse, null, 2)} / Failed to parse image content from API response. Original response: ${JSON.stringify(rawResponse, null, 2)}`,
+								{ itemIndex: i },
+							);
+						} else {
+							// 静默模式:返回特定格式
+							return {
+								json: {
+									success: false,
+									count: 0,
+									originalResponse: rawResponse,
+								},
+							};
 						}
 					}
 
