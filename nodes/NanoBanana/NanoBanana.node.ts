@@ -141,7 +141,6 @@ export class NanoBanana implements INodeType {
 				options: [
 					{ name: '二进制文件(Binary File)', value: 'binary' },
 					{ name: '图片URL(Image URL)', value: 'url' },
-					{ name: '原始响应(Raw Response)', value: 'raw' },
 					{ name: 'Base64数据URL(Base64 Data URL)', value: 'dataUrl' },
 					{ name: 'Base64字符串(Base64 String)', value: 'base64' },
 				],
@@ -550,49 +549,93 @@ export class NanoBanana implements INodeType {
 							const content = responseData.choices[0].message?.content;
 							if (content) {
 								responseText = content;
-								// Attempt to extract Base64 or URL
+								// Attempt to extract Base64 or URL from content
+								// Content may contain:
+								// 1. Markdown image syntax: ![alt](url_or_datauri)
+								// 2. Raw data URL: data:image/xxx;base64,xxx
+								// 3. Raw HTTP URL: https://...
+								// 4. Raw base64 string
+
+								// Step 1: Extract all markdown image URLs first
+								// Match ![...](...)  - capture the URL part
+								const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+								let markdownMatch;
+								const extractedUrls: string[] = [];
+
+								while ((markdownMatch = markdownImageRegex.exec(content)) !== null) {
+									extractedUrls.push(markdownMatch[1]);
+								}
+
+								// Step 2: Process extracted markdown URLs + check for non-markdown patterns
 								let foundData = false;
 
-								// 1. Check for Data URL (Base64)
-								const dataUrlMatch = content.match(
-									/data:(image\/[a-zA-Z]+);base64,([a-zA-Z0-9+/=]+)/,
-								);
-								if (dataUrlMatch) {
-									extractedImages.push({
-										type: 'base64',
-										mimeType: dataUrlMatch[1],
-										data: dataUrlMatch[2],
-									});
-									foundData = true;
-								} else {
-									// 2. Check for Markdown Image or Raw URL
-									// Simple URL regex
+								// Process markdown image URLs (these take priority)
+								for (const url of extractedUrls) {
+									// Check if it's a data URI (may contain newlines/whitespace in base64)
+									const dataUriMatch = url.match(/^data:(image\/[a-zA-Z0-9+-]+);base64,(.+)$/s);
+									if (dataUriMatch) {
+										// Clean base64: remove whitespace/newlines that may be present
+										const cleanBase64 = dataUriMatch[2].replace(/\s/g, '');
+										extractedImages.push({
+											type: 'base64',
+											mimeType: dataUriMatch[1],
+											data: cleanBase64,
+										});
+										foundData = true;
+									} else if (url.startsWith('http://') || url.startsWith('https://')) {
+										// HTTP URL from markdown
+										extractedImages.push({
+											type: 'url',
+											data: url,
+											mimeType: 'image/png',
+										});
+										foundData = true;
+									}
+								}
+
+								// If no markdown images found, check for raw patterns in content
+								if (!foundData) {
+									// Check for raw data URL (not wrapped in markdown)
+									const rawDataUrlMatch = content.match(
+										/data:(image\/[a-zA-Z0-9+-]+);base64,([a-zA-Z0-9+/=\s]+)/s,
+									);
+									if (rawDataUrlMatch) {
+										const cleanBase64 = rawDataUrlMatch[2].replace(/\s/g, '');
+										extractedImages.push({
+											type: 'base64',
+											mimeType: rawDataUrlMatch[1],
+											data: cleanBase64,
+										});
+										foundData = true;
+									}
+								}
+
+								if (!foundData) {
+									// Check for raw HTTP URLs (not in markdown)
 									const urlRegex = /(https?:\/\/[^\s)]+)/g;
 									const urls = content.match(urlRegex);
 									if (urls) {
-										// Filter for likely image URLs if possible, or just take them
 										for (const url of urls) {
-											// Basic cleaning of markdown syntax if regex caught trailing chars
 											const cleanUrl = url.replace(/[)"]$/, '');
 											extractedImages.push({
 												type: 'url',
 												data: cleanUrl,
-												mimeType: 'image/png', // Assume png if unknown from URL
+												mimeType: 'image/png',
 											});
 											foundData = true;
 										}
 									}
+								}
 
-									if (!foundData) {
-										// 3. Check if it looks like raw base64
-										const cleanContent = content.replace(/\s/g, '');
-										if (/^[a-zA-Z0-9+/=]+$/.test(cleanContent) && cleanContent.length > 100) {
-											extractedImages.push({
-												type: 'base64',
-												data: cleanContent,
-												mimeType: 'image/png',
-											});
-										}
+								if (!foundData) {
+									// Check if entire content looks like raw base64
+									const cleanContent = content.replace(/\s/g, '');
+									if (/^[a-zA-Z0-9+/=]+$/.test(cleanContent) && cleanContent.length > 100) {
+										extractedImages.push({
+											type: 'base64',
+											data: cleanContent,
+											mimeType: 'image/png',
+										});
 									}
 								}
 							}
@@ -602,7 +645,7 @@ export class NanoBanana implements INodeType {
 					// --- PROCESS OUTPUT ---
 
 					// --- CHECK PARSE RESULT ---
-					if (extractedImages.length === 0 && outputFormat !== 'raw') {
+					if (extractedImages.length === 0) {
 						if (throwOnFailure) {
 							// 报错模式:抛出异常并显示原始响应
 							throw new NodeOperationError(
@@ -624,11 +667,7 @@ export class NanoBanana implements INodeType {
 
 					// --- PROCESS OUTPUT ---
 
-					if (outputFormat === 'raw') {
-						return {
-							json: rawResponse,
-						};
-					} else if (outputFormat === 'binary') {
+					if (outputFormat === 'binary') {
 						// Convert to n8n binary
 						const binaries: INodeExecutionData['binary'] = {};
 						for (let j = 0; j < extractedImages.length; j++) {
@@ -689,6 +728,7 @@ export class NanoBanana implements INodeType {
 							json: {
 								success: true,
 								count: extractedImages.length,
+								originalResponse: rawResponse,
 							},
 							binary: binaries,
 						};
@@ -768,6 +808,7 @@ export class NanoBanana implements INodeType {
 						const responseJson: JsonObject = {
 							success: true,
 							count: extractedImages.length,
+							originalResponse: rawResponse,
 						};
 
 						// Assign to output property
