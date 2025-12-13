@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-nano-banana",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "description": "n8n node for Nano Banana (Gemini) Image Generation",
     "license": "MIT",
     "homepage": "",
