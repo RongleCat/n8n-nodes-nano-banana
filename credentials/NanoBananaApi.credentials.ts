@@ -6,15 +6,18 @@ export class NanoBananaApi implements ICredentialType {
 	icon: Icon = { light: 'file:../icons/banana.svg', dark: 'file:../icons/banana.dark.svg' };
 	documentationUrl = 'https://ai.google.dev/gemini-api/docs/image-generation';
 
+	// Platform configurations for credential testing
+	// To add a new platform: add entry to PLATFORMS object below and update properties
 	test = {
 		request: {
-			baseURL: '={{$credentials?.connectionType === "openai" ? $credentials?.baseUrl?.replace(new RegExp("/$"), "") : "https://generativelanguage.googleapis.com"}}',
-			url: '={{$credentials?.connectionType === "openai" ? "/models" : "/v1beta/models"}}',
+			// IIFE pattern: define platform configs as object, lookup by connectionType
+			baseURL: '={{(() => { const cfg = { official: "https://generativelanguage.googleapis.com", openrouter: "https://openrouter.ai/api", openai: $credentials?.baseUrl?.replace(/\\/$/, "") }; return cfg[$credentials?.connectionType] || cfg.official; })()}}',
+			url: '={{(() => { const cfg = { official: "/v1beta/models", openrouter: "/v1/models", openai: "/models" }; return cfg[$credentials?.connectionType] || cfg.official; })()}}',
 			qs: {
 				key: '={{$credentials?.connectionType === "official" ? $credentials?.apiKey : undefined}}',
 			},
 			headers: {
-				Authorization: '={{$credentials?.connectionType === "openai" ? "Bearer " + $credentials?.apiKey : undefined}}',
+				Authorization: '={{$credentials?.connectionType !== "official" ? "Bearer " + $credentials?.apiKey : undefined}}',
 			},
 		},
 	};
@@ -32,6 +35,10 @@ export class NanoBananaApi implements ICredentialType {
 				{
 					name: 'OpenAI兼容(OpenAI Compatible)',
 					value: 'openai',
+				},
+				{
+					name: 'OpenRouter',
+					value: 'openrouter',
 				},
 			],
 			default: 'official',

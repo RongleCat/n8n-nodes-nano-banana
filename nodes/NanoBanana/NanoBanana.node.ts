@@ -388,7 +388,8 @@ export class NanoBanana implements INodeType {
 					let rawResponse: JsonObject = {};
 					let responseText = '';
 
-					if (connectionType === 'official') {
+					const isOpenAICompatible = connectionType === 'openai' || connectionType === 'openrouter';
+				if (!isOpenAICompatible) {
 						// --- OFFICIAL GEMINI API ---
 						const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 						const endpoint = `${baseUrl}/${model}:generateContent`;
@@ -462,13 +463,18 @@ export class NanoBanana implements INodeType {
 							}
 						}
 					} else {
-						// --- OPENAI COMPATIBLE ---
-						// Support both Text-to-Image and Image-to-Image via Chat Completions (Vision)
+					// --- OPENAI COMPATIBLE (including OpenRouter) ---
+					// Support both Text-to-Image and Image-to-Image via Chat Completions (Vision)
 
-						let baseUrl = credentials.baseUrl as string;
+					let baseUrl: string;
+					if (connectionType === 'openrouter') {
+						baseUrl = 'https://openrouter.ai/api/v1/';
+					} else {
+						baseUrl = credentials.baseUrl as string;
 						if (!baseUrl.endsWith('/')) baseUrl += '/';
+					}
 
-						const url = `${baseUrl}chat/completions`;
+					const url = `${baseUrl}chat/completions`;
 
 						// Prepare Messages
 						const messages: JsonObject[] = [];
@@ -499,23 +505,30 @@ export class NanoBanana implements INodeType {
 							});
 						}
 
-						// Prepare Image Config
-						const imageConfig: JsonObject = {
-							aspectRatio: aspectRatio,
-						};
+						// Prepare Image Config (not used by OpenRouter)
+					const imageConfig: JsonObject = {
+						aspectRatio: aspectRatio,
+					};
 
-						// Only add resolution for Pro model
-						if (model === 'gemini-3-pro-image-preview') {
-							imageConfig.imageSize = resolution;
-						}
+					// Only add resolution for Pro model
+					if (model === 'gemini-3-pro-image-preview') {
+						imageConfig.imageSize = resolution;
+					}
 
-						const body: JsonObject = {
-							model: model,
-							messages: messages,
-							extra_body: {
-								imageConfig: imageConfig,
-							},
+					// OpenRouter uses different model naming: google/gemini-xxx
+					const actualModel = connectionType === 'openrouter' ? `google/${model}` : model;
+
+					const body: JsonObject = {
+						model: actualModel,
+						messages: messages,
+					};
+
+					// extra_body is only supported by some OpenAI compatible APIs, not OpenRouter
+					if (connectionType !== 'openrouter') {
+						body.extra_body = {
+							imageConfig: imageConfig,
 						};
+					}
 
 						const response = (await this.helpers.httpRequest({
 							method: 'POST',
@@ -541,14 +554,51 @@ export class NanoBanana implements INodeType {
 						}
 
 						rawResponse = response.body as JsonObject;
-						const responseData = response.body as {
-							choices?: Array<{ message?: { content?: string } }>;
-						};
+					const responseData = response.body as {
+						choices?: Array<{
+							message?: {
+								content?: string;
+								// OpenRouter returns images in a separate array
+								images?: Array<{
+									type?: string;
+									image_url?: { url?: string };
+								}>;
+							};
+						}>;
+					};
 
-						if (responseData.choices && responseData.choices.length > 0) {
-							const content = responseData.choices[0].message?.content;
-							if (content) {
-								responseText = content;
+					if (responseData.choices && responseData.choices.length > 0) {
+						const message = responseData.choices[0].message;
+
+						// First, check for OpenRouter's images array format
+						if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+							for (const img of message.images) {
+								if (img.type === 'image_url' && img.image_url?.url) {
+									const imageUrl = img.image_url.url;
+									// Parse data URI
+									const dataUriMatch = imageUrl.match(/^data:(image\/[a-zA-Z0-9+-]+);base64,(.+)$/s);
+									if (dataUriMatch) {
+										const cleanBase64 = dataUriMatch[2].replace(/\s/g, '');
+										extractedImages.push({
+											type: 'base64',
+											mimeType: dataUriMatch[1],
+											data: cleanBase64,
+										});
+									} else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+										extractedImages.push({
+											type: 'url',
+											data: imageUrl,
+											mimeType: 'image/png',
+										});
+									}
+								}
+							}
+						}
+
+						// Then, check for content-based images (fallback for other OpenAI compatible APIs)
+						const content = message?.content;
+						if (content) {
+							responseText = content;
 								// Attempt to extract Base64 or URL from content
 								// Content may contain:
 								// 1. Markdown image syntax: ![alt](url_or_datauri)
