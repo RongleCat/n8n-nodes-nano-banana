@@ -64,5 +64,27 @@ export class NanoBananaApi implements ICredentialType {
 			},
 			description: 'OpenAI兼容API的基础URL,通常应以 / 结尾 / The base URL for the OpenAI compatible API. Should typically end with /',
 		},
+		{
+			displayName: '请求格式(Request Format)',
+			name: 'requestFormat',
+			type: 'options',
+			options: [
+				{
+					name: 'OpenAI兼容(OpenAI Compatible)',
+					value: 'openai',
+				},
+				{
+					name: 'Gemini原生(Gemini Native)',
+					value: 'gemini',
+				},
+			],
+			default: 'gemini',
+			displayOptions: {
+				show: {
+					connectionType: ['openai'],
+				},
+			},
+			description: 'Gemini原生格式使用官方API请求结构,仅替换Base URL;OpenAI兼容格式使用Chat Completions接口 / Gemini Native uses official API request structure with Base URL replaced; OpenAI Compatible uses Chat Completions API',
+		},
 	];
 }
