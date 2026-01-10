@@ -414,10 +414,8 @@ export class NanoBanana implements INodeType {
 							// Use custom Base URL from credentials, but with Gemini API format
 							baseUrl = (credentials.baseUrl as string).replace(/\/$/, '');
 							// Ensure it ends with /v1beta/models or similar path structure
-							if (!baseUrl.includes('/v1beta/models') && !baseUrl.includes('/v1/models')) {
-								// Remove /openai suffix and append standard Gemini models path if not present
-								baseUrl = baseUrl.replace(/\/openai\/?$/, '') + '/v1beta/models';
-							}
+							// Remove /openai suffix and version prefixes (v1/v1beta) to get clean root
+							baseUrl = baseUrl.replace(/\/openai$/, '').replace(/\/(v1|v1beta)$/, '') + '/v1beta/models';
 						} else {
 							baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 						}
